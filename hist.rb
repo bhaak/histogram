@@ -7,6 +7,19 @@ _, $width = IO.console.winsize
 class Histogram
   VERSION = '0.1'
 
+  def parse_options
+    @options = {}
+    OptionParser.new do |parser|
+      parser.separator 'Output a histogram of input data'
+      parser.separator ''
+      parser.separator 'Options:'
+      parser.on('-v', '--version', 'Output version') {
+        puts "#{ARGV[0]} #{Histogram::VERSION}"
+        exit(0)
+      }
+    end.parse!
+  end
+
   def read_data(io)
     data = Hash.new(0)
 
@@ -35,6 +48,7 @@ class Histogram
   end
 
   def initialize(io)
+    parse_options
     @data = read_data(io)
   end
 end
