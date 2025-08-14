@@ -13,6 +13,9 @@ class Histogram
       parser.separator 'Output a histogram of input data'
       parser.separator ''
       parser.separator 'Options:'
+      parser.on('-c', '--cumulative', 'Output cumulative histogram') {
+        @options[:cumulative] = true
+      }
       parser.on('-w', '--width=WIDTH', 'Max width of output bar') { |width|
         @options[:width] = width.to_i
       }
@@ -67,13 +70,22 @@ class Histogram
     @max_value = @data.values.max
     @sum_values = @data.values.sum
 
+    if @options[:cumulative]
+      @max_value = @sum_values
+      @max_width_value = @max_value.to_s.size
+    end
+
     # output histogram
+    cumulated_value = 0
     @data.keys.sort.each { |key|
       value = @data[key]
+      value += cumulated_value if @options[:cumulative]
       percent = value.to_f / @sum_values * 100
       percent_formatted = "(#{ "%#.1f%%" % percent})"
       bar = '#' * scale_bar_width(value)
-      puts "#{ "%#{@max_width_key}d" % key} #{ "%#{@max_width_value}d" % value } #{percent_formatted.rjust(7)} #{bar}"
+      puts "#{ "%#{@max_width_key}d" % key} #{ "%#{@max_width_value}d" % value } #{percent_formatted.rjust(8)} #{bar}"
+
+      cumulated_value = value if @options[:cumulative]
     }
 
     output_summary
