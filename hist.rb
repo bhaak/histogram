@@ -13,6 +13,7 @@ class Histogram
       parser.separator 'Output a histogram of input data'
       parser.separator ''
       parser.separator 'Options:'
+      parser.on('-w', '--width=WIDTH', 'Max width of output bar') { |width| @options[:width] = width.to_i }
       parser.on('-v', '--version', 'Output version') {
         puts "#{ARGV[0]} #{Histogram::VERSION}"
         exit(0)
@@ -38,13 +39,20 @@ class Histogram
     # TODO log
     # TODO check if value bigger than terminal width
 
-    key_width = @data.keys.max_by { |k| k.to_s.size }.to_s.size
+    @max_width_key = @data.keys.max_by { |k| k.to_s.size }.to_s.size
+    @max_width_value = @data.values.max
 
     # output histogram
     @data.keys.sort.each { |key|
       value = @data[key]
-      puts "#{ "%#{key_width}d" % key} #{'#' * value}"
+      puts "#{ "%#{@max_width_key}d" % key} #{'#' * scale_bar_width(value)}"
     }
+  end
+
+  def scale_bar_width(width)
+    return width if @options[:width].nil?
+
+    width * @options[:width] / @max_width_value
   end
 
   def initialize(io)
