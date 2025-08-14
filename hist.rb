@@ -13,7 +13,12 @@ class Histogram
       parser.separator 'Output a histogram of input data'
       parser.separator ''
       parser.separator 'Options:'
-      parser.on('-w', '--width=WIDTH', 'Max width of output bar') { |width| @options[:width] = width.to_i }
+      parser.on('-w', '--width=WIDTH', 'Max width of output bar') { |width|
+        @options[:width] = width.to_i
+      }
+      parser.on('-0', '--zero', 'Include values with no occurrences') {
+        @options[:output_zero] = true
+      }
       parser.on('-v', '--version', 'Output version') {
         puts "#{ARGV[0]} #{Histogram::VERSION}"
         exit(0)
@@ -31,10 +36,16 @@ class Histogram
     data
   end
 
-  def output
+  def fill_empty_slots
+    return unless @options[:output_zero]
+
     # fill empty slots
     min, max = @data.keys.minmax
     (min..max).to_a.each { |i| @data[i] = 0 if @data[i] == 0 }
+  end
+
+  def output
+    fill_empty_slots
 
     # TODO log
     # TODO check if value bigger than terminal width
