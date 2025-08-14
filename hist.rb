@@ -40,19 +40,24 @@ class Histogram
     # TODO check if value bigger than terminal width
 
     @max_width_key = @data.keys.max_by { |k| k.to_s.size }.to_s.size
-    @max_width_value = @data.values.max
+    @max_width_value = @data.values.max_by { _1.to_s.size }.to_s.size
+    @max_value = @data.values.max
+    @sum_values = @data.values.sum
 
     # output histogram
     @data.keys.sort.each { |key|
       value = @data[key]
-      puts "#{ "%#{@max_width_key}d" % key} #{'#' * scale_bar_width(value)}"
+      percent = value.to_f / @sum_values * 100
+      percent_formatted = "(#{ "%#.1f" % percent})"
+      bar = '#' * scale_bar_width(value)
+      puts "#{ "%#{@max_width_key}d" % key} #{ "%#{@max_width_value}d" % value } #{percent_formatted.rjust(7)} #{bar}"
     }
   end
 
   def scale_bar_width(width)
     return width if @options[:width].nil?
 
-    width * @options[:width] / @max_width_value
+    width * @options[:width] / @max_value
   end
 
   def initialize(io)
