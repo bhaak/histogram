@@ -19,6 +19,9 @@ class Histogram
       parser.on('-0', '--zero', 'Include values with no occurrences') {
         @options[:output_zero] = true
       }
+      parser.on('-s', '--output-summary', 'Output summary') {
+        @options[:output_summary] = true
+      }
       parser.on('-v', '--version', 'Output version') {
         puts "#{ARGV[0]} #{Histogram::VERSION}"
         exit(0)
@@ -44,6 +47,15 @@ class Histogram
     (min..max).to_a.each { |i| @data[i] = 0 if @data[i] == 0 }
   end
 
+  def output_summary
+    return unless @options[:output_summary]
+
+    puts '-' * scale_bar_width(@max_value)
+    bar = '#' * scale_bar_width(@max_value)
+    percent = '(100.0%)'
+    puts "#{' ' * @max_width_key} #{ "%#{@max_width_value}d" % @sum_values} #{percent} #{bar}"
+  end
+
   def output
     fill_empty_slots
 
@@ -59,10 +71,12 @@ class Histogram
     @data.keys.sort.each { |key|
       value = @data[key]
       percent = value.to_f / @sum_values * 100
-      percent_formatted = "(#{ "%#.1f" % percent})"
+      percent_formatted = "(#{ "%#.1f%%" % percent})"
       bar = '#' * scale_bar_width(value)
       puts "#{ "%#{@max_width_key}d" % key} #{ "%#{@max_width_value}d" % value } #{percent_formatted.rjust(7)} #{bar}"
     }
+
+    output_summary
   end
 
   def scale_bar_width(width)
