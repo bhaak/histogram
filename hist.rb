@@ -59,12 +59,7 @@ class Histogram
     puts "#{' ' * @max_width_key} #{ "%#{@max_width_value}d" % @sum_values} #{percent} #{bar}"
   end
 
-  def output
-    fill_empty_slots
-
-    # TODO log
-    # TODO check if value bigger than terminal width
-
+  def set_variables
     @max_width_key = @data.keys.max_by { |k| k.to_s.size }.to_s.size
     @max_width_value = @data.values.max_by { _1.to_s.size }.to_s.size
     @max_value = @data.values.max
@@ -74,8 +69,9 @@ class Histogram
       @max_value = @sum_values
       @max_width_value = @max_value.to_s.size
     end
+  end
 
-    # output histogram
+  def output_histogram
     cumulated_value = 0
     @data.keys.sort.each { |key|
       value = @data[key]
@@ -87,7 +83,15 @@ class Histogram
 
       cumulated_value = value if @options[:cumulative]
     }
+  end
 
+  def output
+    # TODO log
+    # TODO check if value bigger than terminal width
+
+    set_variables
+    fill_empty_slots
+    output_histogram
     output_summary
   end
 
