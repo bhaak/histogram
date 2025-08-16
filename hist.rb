@@ -2,17 +2,36 @@
 
 require 'optparse'
 require 'io/console'
+require 'bigdecimal'
+
 _, $width = IO.console.winsize
 
 class Histogram
   VERSION = '0.1'
 
   def parse_options
-    @options = {}
+    @options = {
+      block: '▅',
+      block_unfilled: ' ',
+      foreground: nil,
+      background: nil,
+      width: ($width * 6 / 10),
+    }
     OptionParser.new do |parser|
       parser.separator 'Output a histogram of input data'
       parser.separator ''
       parser.separator 'Options:'
+      parser.on('-a', '--ascii', 'Ouput only ASCII characters') {
+        @options[:block] = '#'
+        @options[:block_unfilled] = ' '
+      }
+      parser.on('-fg', '--foreground=NUMBER', 'Set foreground color') { |number|
+        @options[:foreground] = number
+      }
+
+      parser.on('-bg', '--background=NUMBER', 'Set background color') { |number|
+        @options[:background] = number
+      }
       parser.on('-c', '--cumulative', 'Output cumulative histogram') {
         @options[:cumulative] = true
       }
@@ -54,7 +73,7 @@ class Histogram
     return unless @options[:output_summary]
 
     puts '-' * scale_bar_width(@max_value)
-    bar = '#' * scale_bar_width(@max_value)
+    bar = generate_bar(@max_value)
     percent = '(100.0%)'
     puts "#{' ' * @max_width_key} #{ "%#{@max_width_value}d" % @sum_values} #{percent} #{bar}"
   end
@@ -71,6 +90,15 @@ class Histogram
     end
   end
 
+  def generate_bar(value)
+    scaled_bar_width = scale_bar_width(value)
+    bar = @options[:block] * scaled_bar_width
+    bar += @options[:block_unfilled] * (@options[:width] - scaled_bar_width) if @options[:block_unfilled]
+    bar = "\e[38;5;#{@options[:foreground]}m#{bar}\e[0m" if @options[:foreground]
+    bar = "\e[48;5;#{@options[:background]}m#{bar}\e[0m" if @options[:background]
+    bar
+  end
+
   def output_histogram
     cumulated_value = 0
     @data.keys.sort.each { |key|
@@ -78,7 +106,8 @@ class Histogram
       value += cumulated_value if @options[:cumulative]
       percent = value.to_f / @sum_values * 100
       percent_formatted = "(#{ "%#.1f%%" % percent})"
-      bar = '#' * scale_bar_width(value)
+
+      bar = generate_bar(value)
       puts "#{ "%#{@max_width_key}d" % key} #{ "%#{@max_width_value}d" % value } #{percent_formatted.rjust(8)} #{bar}"
 
       cumulated_value = value if @options[:cumulative]
