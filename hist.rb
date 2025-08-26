@@ -6,6 +6,58 @@ require 'bigdecimal'
 
 _, $width = IO.console.winsize
 
+class TallyMean
+  def self.mean(hash)
+    total_count = hash.values.sum
+    return nil if total_count == 0
+
+    weighted_sum = hash.sum { |val, freq| val * freq }
+    (BigDecimal(weighted_sum) / total_count).to_f
+  end
+
+  def self.median(hash)
+    total_count = hash.values.sum
+    return nil if total_count == 0
+
+    sorted = hash.sort_by { |val, _| val }
+    midpoint = total_count / 2.0
+
+    count = 0
+    sorted.each do |val, freq|
+      count += freq
+      if total_count.odd?
+        return val if count > midpoint.floor
+      else
+        return val if count > midpoint
+        return (val + sorted[sorted.index([val, freq]) + 1][0]) / 2.0 if count == midpoint
+      end
+    end
+  end
+
+  def self.mode(hash)
+    return nil if hash.values.empty?
+
+    max_freq = hash.values.max
+    hash.select { |_, freq| freq == max_freq }.keys
+  end
+
+  def self.geometric_mean(hash)
+    total_count = hash.values.sum
+    return nil if total_count == 0 || hash.keys.any? { |x| x <= 0 }
+
+    # use logarithmic way to calculate geometric mean
+    log_sum = hash.sum { |val, freq| Math.log(val) * freq }
+    Math.exp(log_sum / total_count)
+  end
+
+  def self.harmonic_mean(hash)
+    total_count = hash.values.sum
+    return nil if total_count == 0 || hash.keys.any? { |x| x <= 0 }
+
+    (BigDecimal(total_count) / hash.sum { |val, freq| BigDecimal(freq) / val }).to_f
+  end
+end
+
 class Histogram
   VERSION = '0.1'
 
@@ -114,12 +166,25 @@ class Histogram
     }
   end
 
+  def output_stats
+    values = @data.values
+
+    puts "Min/Max: [#{values.min}, #{values.max}]"
+    puts "Median: #{TallyMean.median(@data)}"
+    puts "Mode: #{TallyMean.mode(@data)}"
+    puts "Mean: #{TallyMean.mean(@data)}"
+    puts "Geometric mean: #{TallyMean.geometric_mean(@data)}"
+    puts "Harmonic mean: #{TallyMean.harmonic_mean(@data)}"
+    puts
+  end
+
   def output
     # TODO log
     # TODO check if value bigger than terminal width
 
     set_variables
     fill_empty_slots
+    output_stats
     output_histogram
     output_summary
   end
