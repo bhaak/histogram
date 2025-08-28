@@ -56,10 +56,26 @@ class TallyMean
 
     (BigDecimal(total_count) / hash.sum { |val, freq| BigDecimal(freq) / val }).to_f
   end
+
+  def self.percentile(hash, percentile)
+    # hash { value => count }
+    # percentile: decimal between 0 and 1
+
+    sorted = hash.keys.sort
+
+    total = hash.values.sum
+    target = percentile * total
+
+    cumulative = 0
+    sorted.each do |val|
+      cumulative += hash[val]
+      return val if cumulative >= target
+    end
+  end
 end
 
 class Histogram
-  VERSION = '0.1'
+  VERSION = '0.2'
 
   def parse_options
     @options = {
@@ -172,9 +188,15 @@ class Histogram
     puts "Min/Max: [#{values.min}, #{values.max}]"
     puts "Median: #{TallyMean.median(@data)}"
     puts "Mode: #{TallyMean.mode(@data)}"
+
     puts "Mean: #{TallyMean.mean(@data)}"
     puts "Geometric mean: #{TallyMean.geometric_mean(@data)}"
     puts "Harmonic mean: #{TallyMean.harmonic_mean(@data)}"
+
+    percentiles = [0.05, 0.25, 0.50, 0.75, 0.95]
+    p = percentiles.map { TallyMean.percentile(@data, _1) }
+    puts "Percentiles #{percentiles.inspect}: #{p.inspect}"
+
     puts
   end
 
