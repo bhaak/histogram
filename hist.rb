@@ -158,10 +158,42 @@ class Histogram
     end
   end
 
+  def color_block(hex)
+    r = hex[1..2].to_i(16)
+    g = hex[3..4].to_i(16)
+    b = hex[5..6].to_i(16)
+    "\e[38;2;#{r};#{g};#{b}m"
+  end
+
+  def distinct_colors_random_min_light(n, seed: nil, min: 0, max: 255)
+    rng = seed ? Random.new(seed) : Random.new
+    (0...n).map { |i|
+      r, g, b = 0
+      loop {
+        r = rng.rand(255)
+        g = rng.rand(255)
+        b = rng.rand(255)
+
+        # ensure that the random color falls within a range of brightness
+        grayness = (0.299 * r + 0.587 * g + 0.114 * b).round
+        break if grayness >= min && grayness <= max
+      }
+      "#%02x%02x%02x" % [r, g, b]
+    }
+  end
+
+  def distinct_colors(n)
+    distinct_colors_random_min_light(n,
+                                     seed: @data.values.max * @data.values.size,
+                                     min: 150,
+                                     max: 200)
+  end
+
   def generate_bar(value)
     scaled_bar_width = scale_bar_width(value)
     bar = @options[:block] * scaled_bar_width
     bar += @options[:block_unfilled] * (@options[:width] - scaled_bar_width) if @options[:block_unfilled]
+    bar = "#{color_block(@colors[value])}#{bar}\e[0m" unless @options[:foreground]
     bar = "\e[38;5;#{@options[:foreground]}m#{bar}\e[0m" if @options[:foreground]
     bar = "\e[48;5;#{@options[:background]}m#{bar}\e[0m" if @options[:background]
     bar
@@ -169,9 +201,19 @@ class Histogram
 
   def output_histogram
     cumulated_value = 0
+
+    if @options[:cumulative]
+    else
+      randomized_values = @data.values.uniq.shuffle(random: Random.new(@data.values.max))
+    end
+    randomized_values = @data.values.uniq
+    colors ||= distinct_colors(randomized_values.size)
+    @colors = Hash.new { |hash, key| hash[key] = colors[randomized_values.index(key)] }
+
     @data.keys.sort.each { |key|
       value = @data[key]
       value += cumulated_value if @options[:cumulative]
+      @colors[value] = @colors[@data[key]]
       percent = value.to_f / @sum_values * 100
       percent_formatted = "(#{ "%#.1f%%" % percent})"
 
@@ -185,6 +227,7 @@ class Histogram
   def output_stats
     values = @data.values
 
+    puts
     puts "Min/Max: [#{values.min}, #{values.max}]"
     puts "Median: #{TallyMean.median(@data)}"
     puts "Mode: #{TallyMean.mode(@data)}"
