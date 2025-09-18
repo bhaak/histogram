@@ -165,6 +165,10 @@ class Histogram
     "\e[38;2;#{r};#{g};#{b}m"
   end
 
+  def grayness(value)
+    "\e[38;2;#{value};#{value};#{value}m"
+  end
+
   def distinct_colors_random_min_light(n, seed: nil, min: 0, max: 255)
     rng = seed ? Random.new(seed) : Random.new
     (0...n).map { |i|
@@ -213,12 +217,22 @@ class Histogram
     @data.keys.sort.each { |key|
       value = @data[key]
       value += cumulated_value if @options[:cumulative]
+
+      gray = grayness([255, (value.to_f / @data.values.max * 255 + 10).to_i].min)
+      reset = "\e[0m"
+
       @colors[value] = @colors[@data[key]]
       percent = value.to_f / @sum_values * 100
-      percent_formatted = "(#{ "%#.1f%%" % percent})"
+      percent_formatted = "(#{ "%#.1f%%" % percent})".rjust(7)
+      percent_formatted.insert(percent_formatted.index('(') + 1, gray)
+      percent_formatted.insert(percent_formatted.index(')'), reset)
 
       bar = generate_bar(value)
-      puts "#{ "%#{@max_width_key}d" % key} #{ "%#{@max_width_value}d" % value } #{percent_formatted.rjust(8)} #{bar}"
+
+      puts ["#{ "%#{@max_width_key}d" % key}",
+        "#{gray}#{ "%#{@max_width_value}d" % value }#{reset}",
+        "#{percent_formatted}",
+        "#{bar}"].join(' ')
 
       cumulated_value = value if @options[:cumulative]
     }
