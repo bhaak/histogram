@@ -84,6 +84,7 @@ class Histogram
       foreground: nil,
       background: nil,
       width: ($width * 6 / 10),
+      color: ENV['NO_COLOR'] ? false : $stdout.tty?
     }
     OptionParser.new do |parser|
       parser.separator 'Output a histogram of input data'
@@ -93,10 +94,12 @@ class Histogram
         @options[:block] = '#'
         @options[:block_unfilled] = ' '
       }
+      parser.on('--[no-]color', 'Activate color output') { |color|
+        @options[:color] = color
+      }
       parser.on('-fg', '--foreground=NUMBER', 'Set foreground color') { |number|
         @options[:foreground] = number
       }
-
       parser.on('-bg', '--background=NUMBER', 'Set background color') { |number|
         @options[:background] = number
       }
@@ -166,7 +169,7 @@ class Histogram
   end
 
   def grayness(value)
-    "\e[38;2;#{value};#{value};#{value}m"
+    @options[:color] ? "\e[38;2;#{value};#{value};#{value}m" : ""
   end
 
   def distinct_colors_random_min_light(n, seed: nil, min: 0, max: 255)
@@ -197,9 +200,13 @@ class Histogram
     scaled_bar_width = scale_bar_width(value)
     bar = @options[:block] * scaled_bar_width
     bar += @options[:block_unfilled] * (@options[:width] - scaled_bar_width) if @options[:block_unfilled]
-    bar = "#{color_block(@colors[value])}#{bar}\e[0m" unless @options[:foreground]
-    bar = "\e[38;5;#{@options[:foreground]}m#{bar}\e[0m" if @options[:foreground]
-    bar = "\e[48;5;#{@options[:background]}m#{bar}\e[0m" if @options[:background]
+
+    if @options[:color]
+      bar = "#{color_block(@colors[value])}#{bar}\e[0m" unless @options[:foreground]
+      bar = "\e[38;5;#{@options[:foreground]}m#{bar}\e[0m" if @options[:foreground]
+      bar = "\e[48;5;#{@options[:background]}m#{bar}\e[0m" if @options[:background]
+    end
+
     bar
   end
 
@@ -219,7 +226,7 @@ class Histogram
       value += cumulated_value if @options[:cumulative]
 
       gray = grayness([255, (value.to_f / @data.values.max * 255 + 10).to_i].min)
-      reset = "\e[0m"
+      reset = @options[:color] ? "\e[0m" : ''
 
       @colors[value] = @colors[@data[key]]
       percent = value.to_f / @sum_values * 100
