@@ -74,6 +74,30 @@ class TallyMean
   end
 end
 
+class InputData
+  def self.read(io, precision: nil)
+    data = Hash.new(0)
+    raw_data = Hash.new(0)
+
+    io.each_line { |line|
+      value = line.strip.to_i
+
+      if precision
+        k = Math.log10(value).to_i
+        index = ((value / 10.0**k).round(precision) * 10**k).to_i
+      else
+        index = value
+      end
+
+      raw_data[value] += 1
+      data[index] += 1
+    }
+
+    [data, raw_data]
+  end
+end
+
+
 class Histogram
   VERSION = '0.2'
 
@@ -115,21 +139,14 @@ class Histogram
       parser.on('-s', '--output-summary', 'Output summary') {
         @options[:output_summary] = true
       }
+      parser.on('-p', '--precision=NUMBER', '') { |number|
+        @options[:precision] = number.to_i * -1
+      }
       parser.on('-v', '--version', 'Output version') {
         puts "#{ARGV[0]} #{Histogram::VERSION}"
         exit(0)
       }
     end.parse!
-  end
-
-  def read_data(io)
-    data = Hash.new(0)
-
-    io.each_line { |line|
-      data[line.strip.to_i] += 1
-    }
-
-    data
   end
 
   def fill_empty_slots
@@ -283,7 +300,7 @@ class Histogram
 
   def initialize(io)
     parse_options
-    @data = read_data(io)
+    @data, @raw_data = InputData.read(io, precision: @options[:precision])
   end
 end
 
